@@ -3,7 +3,7 @@
 // ---------------------------------------------------------------------------
 
 export class CareerAssistantError extends Error {
-  code: string;
+  readonly code: string;
   readonly cause?: unknown;
 
   constructor(code: string, message: string, cause?: unknown) {
@@ -133,8 +133,9 @@ export class ChainError extends CareerAssistantError {
     chainName: string,
     rawOutput?: string,
     cause?: unknown,
+    code: string = "CHAIN_FAILED",
   ) {
-    super("CHAIN_FAILED", message, cause);
+    super(code, message, cause);
     this.name = "ChainError";
     this.chainName = chainName;
     this.rawOutput = rawOutput ? rawOutput.slice(0, 500) : undefined;
@@ -160,9 +161,9 @@ export class LLMParseError extends ChainError {
       chainName,
       received,
       cause,
+      "LLM_PARSE_FAILED",
     );
     this.name = "LLMParseError";
-    this.code = "LLM_PARSE_FAILED";
     this.expected = expected;
     this.received = received.slice(0, 500);
   }
