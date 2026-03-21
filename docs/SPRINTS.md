@@ -39,7 +39,7 @@
 
 #### Story 1.1 — Create the error class hierarchy
 
-`[ ]` | Size: **M** | PRD: NFR-300, NFR-303
+`[x]` | Size: **M** | PRD: NFR-300, NFR-303
 
 **What:** Create a base `CareerAssistantError` class and domain-specific subclasses: `DocumentError`, `EmbeddingError`, `VectorStoreError`, `ChainError`, `LLMParseError`, `ConfigError`.
 
@@ -48,15 +48,15 @@
 **What you'll learn:** TypeScript class inheritance, extending `Error` properly (prototype chain), adding typed properties to errors, the `cause` pattern for error wrapping.
 
 **Tasks:**
-- [ ] Create `src/errors/index.ts` with the error hierarchy from ARCHITECTURE.md §7
-- [ ] Each error class should have a unique `code` string (e.g., `DOCUMENT_LOAD_FAILED`, `LLM_PARSE_FAILED`)
-- [ ] Each error stores the original `cause` (the underlying error that triggered it)
-- [ ] `LLMParseError` should include `rawOutput` (first 500 chars) and `expected` (schema name)
+- [x] Create `src/errors/index.ts` with the error hierarchy from ARCHITECTURE.md §7
+- [x] Each error class should have a unique `code` string (e.g., `DOCUMENT_LOAD_FAILED`, `LLM_PARSE_FAILED`)
+- [x] Each error stores the original `cause` (the underlying error that triggered it)
+- [x] `LLMParseError` should include `rawOutput` (first 500 chars) and `expected` (schema name)
 
 **Acceptance criteria:**
-- [ ] All error classes extend `CareerAssistantError`
-- [ ] `instanceof` checks work correctly for all subclasses
-- [ ] Each error produces a readable `message` without needing to inspect properties
+- [x] All error classes extend `CareerAssistantError`
+- [x] `instanceof` checks work correctly for all subclasses
+- [x] Each error produces a readable `message` without needing to inspect properties
 
 ---
 
