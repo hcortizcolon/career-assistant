@@ -21,8 +21,10 @@ export async function validateFilePath(
   const absolutePath = resolve(filePath);
   const ext = extname(absolutePath).toLowerCase();
 
-  if (!ext || !allowedExtensions.includes(ext)) {
-    throw DocumentError.unsupportedType(absolutePath, ext || "(none)", allowedExtensions);
+  const normalizedAllowed = allowedExtensions.map((e) => e.toLowerCase());
+
+  if (!ext || !normalizedAllowed.includes(ext)) {
+    throw DocumentError.unsupportedType(absolutePath, ext || "(none)", normalizedAllowed);
   }
 
   try {

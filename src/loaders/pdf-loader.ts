@@ -31,7 +31,12 @@ export async function loadPdf(
     throw DocumentError.readFailed(absolutePath, error);
   }
 
-  const parsed = await pdfParse(buffer);
+  let parsed: Awaited<ReturnType<typeof pdfParse>>;
+  try {
+    parsed = await pdfParse(buffer);
+  } catch (error) {
+    throw DocumentError.readFailed(absolutePath, error);
+  }
 
   if (!parsed.text.trim()) {
     throw DocumentError.empty(absolutePath);
