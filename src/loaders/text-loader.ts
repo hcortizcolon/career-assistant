@@ -1,7 +1,9 @@
 import { readFile } from "node:fs/promises";
-import { resolve, extname } from "node:path";
+import { extname } from "node:path";
 import { Document } from "@langchain/core/documents";
+import { DocumentError } from "../errors/index.js";
 import { logger } from "../utils/logger.js";
+import { validateFilePath } from "./validate.js";
 
 export interface TextLoadOptions {
   /** Encoding to use when reading the file.  Defaults to utf-8. */
@@ -20,15 +22,20 @@ export async function loadText(
   filePath: string,
   options: TextLoadOptions = {},
 ): Promise<Document> {
-  const absolutePath = resolve(filePath);
+  const absolutePath = await validateFilePath(filePath, [".txt", ".md"]);
   const encoding = options.encoding ?? "utf-8";
 
   logger.info(`Loading text file: ${absolutePath}`, "TextLoader");
 
-  const content = await readFile(absolutePath, { encoding });
+  let content: string;
+  try {
+    content = await readFile(absolutePath, { encoding });
+  } catch (error) {
+    throw DocumentError.readFailed(absolutePath, error);
+  }
 
   if (!content.trim()) {
-    throw new Error(`Text file at ${absolutePath} is empty.`);
+    throw DocumentError.empty(absolutePath);
   }
 
   logger.debug(`Read ${content.length} chars`, "TextLoader");
@@ -54,7 +61,7 @@ export function documentFromString(
   metadata: Record<string, unknown> = {},
 ): Document {
   if (!text.trim()) {
-    throw new Error("Cannot create a Document from an empty string.");
+    throw DocumentError.empty("inline");
   }
 
   return new Document({

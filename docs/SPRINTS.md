@@ -62,7 +62,7 @@
 
 #### Story 1.2 — Add file validation to document loaders
 
-`[ ]` | Size: **S** | PRD: FR-108, NFR-304
+`[x]` | Size: **S** | PRD: FR-108, NFR-304
 
 **What:** Before reading a file, check that it exists, is readable, and has a supported extension. Throw `DocumentError` (from Story 1.1) with the file path and reason.
 
@@ -71,15 +71,15 @@
 **What you'll learn:** `node:fs/promises` `access()` for permission checks, defensive programming before I/O, wrapping system errors in domain errors.
 
 **Tasks:**
-- [ ] Add a `validateFilePath(path, allowedExtensions)` helper in `src/loaders/`
-- [ ] Check: file exists (`fs.access`), extension is in allowlist (`.pdf`, `.txt`, `.md`)
-- [ ] Call `validateFilePath` at the top of `loadPdf()` and `loadText()`
-- [ ] Wrap the `readFile` call in try/catch, re-throw as `DocumentError`
+- [x] Add a `validateFilePath(path, allowedExtensions)` helper in `src/loaders/`
+- [x] Check: file exists (`fs.access`), extension is in allowlist (`.pdf`, `.txt`, `.md`)
+- [x] Call `validateFilePath` at the top of `loadPdf()` and `loadText()`
+- [x] Wrap the `readFile` call in try/catch, re-throw as `DocumentError`
 
 **Acceptance criteria:**
-- [ ] Non-existent file → `DocumentError` with message like `File not found: /path/to/missing.pdf`
-- [ ] Unsupported extension → `DocumentError` with message like `Unsupported file type: .xlsx. Supported: .pdf, .txt, .md`
-- [ ] Permission denied → `DocumentError` with message mentioning permissions
+- [x] Non-existent file → `DocumentError` with message like `File not found: /path/to/missing.pdf`
+- [x] Unsupported extension → `DocumentError` with message like `Unsupported file type: .xlsx. Supported: .pdf, .txt, .md`
+- [x] Permission denied → `DocumentError` with message mentioning permissions
 
 ---
 

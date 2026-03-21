@@ -1,8 +1,9 @@
 import { readFile } from "node:fs/promises";
-import { resolve } from "node:path";
 import pdfParse from "pdf-parse";
 import { Document } from "@langchain/core/documents";
+import { DocumentError } from "../errors/index.js";
 import { logger } from "../utils/logger.js";
+import { validateFilePath } from "./validate.js";
 
 export interface PdfLoadOptions {
   /** Optional metadata to attach to every document produced from this PDF. */
@@ -20,14 +21,20 @@ export async function loadPdf(
   filePath: string,
   options: PdfLoadOptions = {},
 ): Promise<Document> {
-  const absolutePath = resolve(filePath);
+  const absolutePath = await validateFilePath(filePath, [".pdf"]);
   logger.info(`Loading PDF: ${absolutePath}`, "PdfLoader");
 
-  const buffer = await readFile(absolutePath);
+  let buffer: Buffer;
+  try {
+    buffer = await readFile(absolutePath);
+  } catch (error) {
+    throw DocumentError.readFailed(absolutePath, error);
+  }
+
   const parsed = await pdfParse(buffer);
 
   if (!parsed.text.trim()) {
-    throw new Error(`PDF at ${absolutePath} yielded no extractable text.`);
+    throw DocumentError.empty(absolutePath);
   }
 
   logger.debug(
