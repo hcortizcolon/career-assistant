@@ -3,8 +3,10 @@ import { logger } from "./logger.js";
 export interface RetryOptions {
   /** Maximum number of retries (default 3). Total attempts = maxRetries + 1. */
   maxRetries?: number;
-  /** Base delay in milliseconds (default 1000). Actual delay: baseDelayMs * 2^attempt. */
+  /** Base delay in milliseconds (default 1000). Actual delay: baseDelayMs * 2^attempt * jitter. */
   baseDelayMs?: number;
+  /** Maximum delay in milliseconds (default 30000). Caps exponential growth. */
+  maxDelayMs?: number;
   /** Predicate that determines if an error is retryable. Defaults to retrying on common transient HTTP errors. */
   isRetryable?: (error: unknown) => boolean;
   /** Label for log messages (e.g. "EmbeddingAPI", "PineconeUpsert"). */
@@ -14,20 +16,20 @@ export interface RetryOptions {
 /**
  * Default retryable error check.
  * Retries on: 429 (rate limit), 500, 502, 503, 504, ECONNRESET, ETIMEDOUT.
- * Does NOT retry on: 400, 401, 403, 404 (client errors that won't change on retry).
+ * Does NOT retry on: 400, 401, 403, 404, 501 (client errors / not implemented).
  */
 export function isTransientError(error: unknown): boolean {
   if (!(error instanceof Error)) return false;
 
-  const message = error.message.toLowerCase();
+  const message = error.message;
 
-  // HTTP status codes in error messages
-  if (/429|rate.?limit/i.test(message)) return true;
-  if (/50[0234]/i.test(message)) return true;
+  // HTTP status codes — word boundaries prevent matching inside larger numbers
+  if (/\b429\b|rate.?limit/i.test(message)) return true;
+  if (/\b50[0234]\b/i.test(message)) return true;
 
   // Network errors
   if (/econnreset|etimedout|econnrefused|socket.?hang.?up/i.test(message)) return true;
-  if (/network|fetch failed/i.test(message)) return true;
+  if (/\bnetwork\b|fetch failed/i.test(message)) return true;
 
   // Check for status code property (common in API client errors)
   const statusError = error as unknown as Record<string, unknown>;
@@ -46,7 +48,9 @@ function sleep(ms: number): Promise<void> {
 /**
  * Wrap an async function with exponential backoff retry.
  *
- * Delay formula: baseDelayMs * 2^attempt (1s, 2s, 4s with defaults).
+ * Delay formula: min(baseDelayMs * 2^attempt * jitter, maxDelayMs).
+ * Jitter spreads retries across 50-100% of the computed delay to prevent
+ * thundering herd when multiple clients retry simultaneously.
  * Only retries when isRetryable returns true — client errors (401, 400) throw immediately.
  */
 export async function withRetry<T>(
@@ -56,6 +60,7 @@ export async function withRetry<T>(
   const {
     maxRetries = 3,
     baseDelayMs = 1000,
+    maxDelayMs = 30_000,
     isRetryable = isTransientError,
     label = "withRetry",
   } = options;
@@ -68,7 +73,11 @@ export async function withRetry<T>(
         throw error;
       }
 
-      const delayMs = baseDelayMs * Math.pow(2, attempt);
+      const jitter = 0.5 + Math.random() * 0.5;
+      const delayMs = Math.min(
+        Math.round(baseDelayMs * Math.pow(2, attempt) * jitter),
+        maxDelayMs,
+      );
       logger.warn(
         `${label} attempt ${attempt + 1} failed, retrying in ${delayMs}ms: ${error instanceof Error ? error.message : String(error)}`,
         label,

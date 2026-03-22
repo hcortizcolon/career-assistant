@@ -43,10 +43,13 @@ export async function getVectorStore(
     "VectorStore",
   );
 
-  return PineconeStore.fromExistingIndex(embeddings, {
-    pineconeIndex: index,
-    namespace,
-  });
+  return withRetry(
+    () => PineconeStore.fromExistingIndex(embeddings, {
+      pineconeIndex: index,
+      namespace,
+    }),
+    { label: "PineconeConnect" },
+  );
 }
 
 /**
@@ -73,6 +76,8 @@ export async function upsertDocuments(
       pineconeIndex: index,
       namespace,
     }),
+    // Fewer retries than queries — upserts are heavier and less likely to
+    // succeed on a transient failure (partial writes, larger payloads).
     { label: "PineconeUpsert", maxRetries: 2 },
   );
 
