@@ -1,16 +1,18 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { z } from "zod";
 import { executeChain } from "../../src/utils/chain-executor.js";
 import { LLMParseError } from "../../src/errors/index.js";
 
-// Suppress logger output during tests
+// Suppress logger output during tests — keep references for assertion
+const mockLogger = vi.hoisted(() => ({
+  debug: vi.fn(),
+  info: vi.fn(),
+  warn: vi.fn(),
+  error: vi.fn(),
+}));
+
 vi.mock("../../src/utils/logger.js", () => ({
-  logger: {
-    debug: vi.fn(),
-    info: vi.fn(),
-    warn: vi.fn(),
-    error: vi.fn(),
-  },
+  logger: mockLogger,
 }));
 
 // ---------------------------------------------------------------------------
@@ -22,9 +24,7 @@ const testSchema = z.object({
   label: z.string(),
 });
 
-type TestResult = z.infer<typeof testSchema>;
-
-const VALID_RESULT: TestResult = { score: 85, label: "good" };
+const VALID_RESULT = { score: 85, label: "good" };
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -46,11 +46,23 @@ function networkErrorInvoke(): Promise<string> {
   return Promise.reject(new Error("OpenAI 500: Internal Server Error"));
 }
 
+function emptyStringInvoke(): Promise<string> {
+  return Promise.resolve("");
+}
+
+function markdownFencedInvoke(): Promise<string> {
+  return Promise.resolve('```json\n{"score": 85, "label": "good"}\n```');
+}
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 
 describe("executeChain", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   describe("happy path", () => {
     it("returns validated result on first try", async () => {
       const result = await executeChain(
@@ -74,6 +86,12 @@ describe("executeChain", () => {
       expect(result.score).toBe(85);
       expect(result.label).toBe("good");
     });
+
+    it("does not log any warnings on success", async () => {
+      await executeChain("TestChain", validInvoke, testSchema, "TestResult");
+
+      expect(mockLogger.warn).not.toHaveBeenCalled();
+    });
   });
 
   describe("JSON parse failure with retry", () => {
@@ -94,6 +112,23 @@ describe("executeChain", () => {
 
       expect(result).toEqual(VALID_RESULT);
       expect(attempt).toBe(2);
+    });
+
+    it("logs a warning on retry", async () => {
+      let attempt = 0;
+      const invoke = (): Promise<string> => {
+        attempt++;
+        if (attempt === 1) return malformedJsonInvoke();
+        return validInvoke();
+      };
+
+      await executeChain("TestChain", invoke, testSchema, "TestResult");
+
+      expect(mockLogger.warn).toHaveBeenCalledTimes(1);
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        expect.stringContaining("attempt 1 failed"),
+        "TestChain",
+      );
     });
 
     it("throws LLMParseError after retries exhausted", async () => {
@@ -265,6 +300,78 @@ describe("executeChain", () => {
 
       expect(result).toEqual(VALID_RESULT);
       expect(attempt).toBe(3);
+    });
+  });
+
+  describe("edge cases", () => {
+    it("handles empty string from LLM as JSON parse failure", async () => {
+      try {
+        await executeChain(
+          "TestChain",
+          emptyStringInvoke,
+          testSchema,
+          "TestResult",
+          0,
+        );
+        expect.fail("Should have thrown");
+      } catch (error) {
+        expect(error).toBeInstanceOf(LLMParseError);
+        expect((error as LLMParseError).expected).toBe("valid JSON");
+      }
+    });
+
+    it("handles markdown-fenced JSON as parse failure", async () => {
+      // LLMs frequently wrap JSON in ```json fences despite instructions not to
+      try {
+        await executeChain(
+          "TestChain",
+          markdownFencedInvoke,
+          testSchema,
+          "TestResult",
+          0,
+        );
+        expect.fail("Should have thrown");
+      } catch (error) {
+        expect(error).toBeInstanceOf(LLMParseError);
+        expect((error as LLMParseError).expected).toBe("valid JSON");
+      }
+    });
+
+    it("handles valid JSON that doesn't match the schema shape", async () => {
+      // LLM returns a JSON array instead of an object
+      const arrayInvoke = () => Promise.resolve('[1, 2, 3]');
+
+      try {
+        await executeChain(
+          "TestChain",
+          arrayInvoke,
+          testSchema,
+          "TestResult",
+          0,
+        );
+        expect.fail("Should have thrown");
+      } catch (error) {
+        expect(error).toBeInstanceOf(LLMParseError);
+        expect((error as LLMParseError).expected).toBe("TestResult");
+      }
+    });
+
+    it("handles JSON null as Zod validation failure", async () => {
+      const nullInvoke = () => Promise.resolve("null");
+
+      try {
+        await executeChain(
+          "TestChain",
+          nullInvoke,
+          testSchema,
+          "TestResult",
+          0,
+        );
+        expect.fail("Should have thrown");
+      } catch (error) {
+        expect(error).toBeInstanceOf(LLMParseError);
+        expect((error as LLMParseError).expected).toBe("TestResult");
+      }
     });
   });
 });

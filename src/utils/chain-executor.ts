@@ -4,7 +4,8 @@ import { logger } from "./logger.js";
 
 /**
  * Execute an LLM chain, parse the JSON output, and validate with Zod.
- * Retries once on parse/validation failure since LLM output is non-deterministic.
+ * Retries on parse/validation failure since LLM output is non-deterministic.
+ * No delay between retries — parse failures are randomness, not load.
  *
  * @param chainName  - Used for logging and error context
  * @param invoke     - Async function that calls the chain and returns a raw string
@@ -15,20 +16,16 @@ import { logger } from "./logger.js";
 export async function executeChain<T>(
   chainName: string,
   invoke: () => Promise<string>,
-  schema: z.ZodSchema<T>,
+  schema: z.ZodType<T>,
   schemaName: string,
   maxRetries = 1,
 ): Promise<T> {
-  let lastError: Error | undefined;
-  let lastRawOutput: string | undefined;
-
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
       const raw = await invoke();
-      lastRawOutput = raw;
 
       logger.debug(
-        `Raw LLM output (attempt ${attempt + 1}): ${raw.slice(0, 200)}...`,
+        `Raw LLM output (attempt ${attempt + 1}): ${raw.length > 200 ? raw.slice(0, 200) + "..." : raw}`,
         chainName,
       );
 
@@ -51,8 +48,7 @@ export async function executeChain<T>(
 
       return result.data;
     } catch (error) {
-      lastError = error instanceof Error ? error : new Error(String(error));
-
+      // Only retry LLMParseErrors — network errors, rate limits, etc. throw immediately
       if (error instanceof LLMParseError && attempt < maxRetries) {
         logger.warn(
           `${chainName} attempt ${attempt + 1} failed (${error.expected}), retrying...`,
@@ -61,17 +57,10 @@ export async function executeChain<T>(
         continue;
       }
 
-      // Non-parse errors (network, rate limit, etc.) should not be retried here
-      if (!(error instanceof LLMParseError)) {
-        throw error;
-      }
+      throw error;
     }
   }
 
-  // All retries exhausted — throw the last parse error
-  throw lastError ?? LLMParseError.jsonParseFailed(
-    chainName,
-    lastRawOutput ?? "(no output)",
-    new Error("All retries exhausted"),
-  );
+  // Unreachable — the loop always returns or throws. TypeScript needs this.
+  throw new Error(`${chainName}: unexpected end of retry loop`);
 }
