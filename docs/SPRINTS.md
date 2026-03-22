@@ -85,7 +85,7 @@
 
 #### Story 1.3 — Wrap chain outputs with retry-on-parse-failure
 
-`[ ]` | Size: **M** | PRD: FR-208, NFR-303
+`[x]` | Size: **M** | PRD: FR-208, NFR-303
 
 **What:** Create a `executeChain<T>()` utility that runs a chain, parses the JSON output, validates with Zod, and retries once on parse/validation failure.
 
@@ -94,17 +94,17 @@
 **What you'll learn:** TypeScript generics, Zod's `safeParse` vs `parse`, retry patterns, the difference between `JSON.parse` failures and schema validation failures.
 
 **Tasks:**
-- [ ] Create `src/utils/chain-executor.ts` with an `executeChain<T>()` function
-- [ ] Accept: `chainName` (for logging), `invoke` (async fn returning string), `schema` (Zod), `maxRetries` (default 1)
-- [ ] On `JSON.parse` failure: log warning, retry
-- [ ] On Zod validation failure: log warning with Zod error path, retry
-- [ ] After max retries exhausted: throw `LLMParseError` with raw output and schema name
-- [ ] Refactor `job-fit-chain.ts`, `skill-gap-chain.ts`, `rewrite-chain.ts` to use `executeChain`
+- [x] Create `src/utils/chain-executor.ts` with an `executeChain<T>()` function
+- [x] Accept: `chainName` (for logging), `invoke` (async fn returning string), `schema` (Zod), `maxRetries` (default 1)
+- [x] On `JSON.parse` failure: log warning, retry
+- [x] On Zod validation failure: log warning with Zod error path, retry
+- [x] After max retries exhausted: throw `LLMParseError` with raw output and schema name
+- [x] Refactor `job-fit-chain.ts`, `skill-gap-chain.ts`, `rewrite-chain.ts` to use `executeChain`
 
 **Acceptance criteria:**
-- [ ] Passing a chain that returns valid JSON on first try: works, no retry
-- [ ] Passing a chain that returns garbage on try 1, valid JSON on try 2: works, logs a warning
-- [ ] Passing a chain that returns garbage on both tries: throws `LLMParseError` with the raw output
+- [x] Passing a chain that returns valid JSON on first try: works, no retry
+- [x] Passing a chain that returns garbage on try 1, valid JSON on try 2: works, logs a warning
+- [x] Passing a chain that returns garbage on both tries: throws `LLMParseError` with the raw output
 
 ---
 

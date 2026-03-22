@@ -5,6 +5,7 @@ import { z } from "zod";
 import { env } from "../config/env.js";
 import { jobFitScoringPrompt } from "../prompts/templates.js";
 import { querySimilarWithScores } from "../vectorstore/pinecone-client.js";
+import { executeChain } from "../utils/chain-executor.js";
 import { logger } from "../utils/logger.js";
 
 // ---------------------------------------------------------------------------
@@ -126,15 +127,15 @@ export async function scoreJobFit(
 
   const chain = createJobFitChain(options);
 
-  const raw = await chain.invoke({
-    resume: enrichedResume,
-    jobDescription: jobDescriptionText,
-  });
-
-  logger.debug(`Raw LLM output: ${raw.slice(0, 200)}...`, "JobFitChain");
-
-  const parsed = JSON.parse(raw) as unknown;
-  const result = jobFitResultSchema.parse(parsed);
+  const result = await executeChain(
+    "JobFitChain",
+    () => chain.invoke({
+      resume: enrichedResume,
+      jobDescription: jobDescriptionText,
+    }),
+    jobFitResultSchema,
+    "JobFitResult",
+  );
 
   logger.info(
     `Job-fit overall score: ${result.overallScore}/100`,

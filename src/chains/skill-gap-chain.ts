@@ -4,6 +4,7 @@ import { ChatOpenAI } from "@langchain/openai";
 import { z } from "zod";
 import { env } from "../config/env.js";
 import { skillGapPrompt } from "../prompts/templates.js";
+import { executeChain } from "../utils/chain-executor.js";
 import { logger } from "../utils/logger.js";
 
 // ---------------------------------------------------------------------------
@@ -76,15 +77,15 @@ export async function analyzeSkillGaps(
 
   const chain = createSkillGapChain(options);
 
-  const raw = await chain.invoke({
-    resume: resumeText,
-    jobDescription: jobDescriptionText,
-  });
-
-  logger.debug(`Raw LLM output: ${raw.slice(0, 200)}...`, "SkillGapChain");
-
-  const parsed = JSON.parse(raw) as unknown;
-  const result = skillGapResultSchema.parse(parsed);
+  const result = await executeChain(
+    "SkillGapChain",
+    () => chain.invoke({
+      resume: resumeText,
+      jobDescription: jobDescriptionText,
+    }),
+    skillGapResultSchema,
+    "SkillGapResult",
+  );
 
   const criticalCount = result.gaps.filter(
     (g) => g.severity === "critical",

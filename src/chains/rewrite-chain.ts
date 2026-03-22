@@ -4,6 +4,7 @@ import { ChatOpenAI } from "@langchain/openai";
 import { z } from "zod";
 import { env } from "../config/env.js";
 import { rewritePrompt } from "../prompts/templates.js";
+import { executeChain } from "../utils/chain-executor.js";
 import { logger } from "../utils/logger.js";
 
 // ---------------------------------------------------------------------------
@@ -76,15 +77,15 @@ export async function suggestRewrites(
 
   const chain = createRewriteChain(options);
 
-  const raw = await chain.invoke({
-    resumeSection,
-    jobDescription: jobDescriptionText,
-  });
-
-  logger.debug(`Raw LLM output: ${raw.slice(0, 200)}...`, "RewriteChain");
-
-  const parsed = JSON.parse(raw) as unknown;
-  const result = rewriteResultSchema.parse(parsed);
+  const result = await executeChain(
+    "RewriteChain",
+    () => chain.invoke({
+      resumeSection,
+      jobDescription: jobDescriptionText,
+    }),
+    rewriteResultSchema,
+    "RewriteResult",
+  );
 
   logger.info(
     `Generated ${result.suggestions.length} rewrite suggestion(s)`,
