@@ -4,6 +4,7 @@ import { Document } from "@langchain/core/documents";
 import { env } from "../config/env.js";
 import { getEmbeddings } from "../embeddings/embed.js";
 import { logger } from "../utils/logger.js";
+import { withRetry } from "../utils/retry.js";
 
 let pineconeClient: Pinecone | null = null;
 
@@ -67,10 +68,13 @@ export async function upsertDocuments(
     "VectorStore",
   );
 
-  await PineconeStore.fromDocuments(docs, embeddings, {
-    pineconeIndex: index,
-    namespace,
-  });
+  await withRetry(
+    () => PineconeStore.fromDocuments(docs, embeddings, {
+      pineconeIndex: index,
+      namespace,
+    }),
+    { label: "PineconeUpsert", maxRetries: 2 },
+  );
 
   logger.info("Upsert complete", "VectorStore");
 }
@@ -90,7 +94,10 @@ export async function querySimilar(
     "VectorStore",
   );
 
-  return store.similaritySearch(query, k);
+  return withRetry(
+    () => store.similaritySearch(query, k),
+    { label: "PineconeQuery" },
+  );
 }
 
 /**
@@ -109,7 +116,10 @@ export async function querySimilarWithScores(
     "VectorStore",
   );
 
-  return store.similaritySearchWithScore(query, k);
+  return withRetry(
+    () => store.similaritySearchWithScore(query, k),
+    { label: "PineconeQueryWithScores" },
+  );
 }
 
 /**

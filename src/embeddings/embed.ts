@@ -2,6 +2,7 @@ import { OpenAIEmbeddings } from "@langchain/openai";
 import { Document } from "@langchain/core/documents";
 import { env } from "../config/env.js";
 import { logger } from "../utils/logger.js";
+import { withRetry } from "../utils/retry.js";
 
 let embeddingsInstance: OpenAIEmbeddings | null = null;
 
@@ -32,7 +33,9 @@ export function getEmbeddings(): OpenAIEmbeddings {
 export async function embedText(text: string): Promise<number[]> {
   const embeddings = getEmbeddings();
   logger.debug(`Embedding single text (${text.length} chars)`, "Embeddings");
-  return embeddings.embedQuery(text);
+  return withRetry(() => embeddings.embedQuery(text), {
+    label: "EmbedQuery",
+  });
 }
 
 /**
@@ -49,7 +52,9 @@ export async function embedDocuments(docs: Document[]): Promise<number[][]> {
     "Embeddings",
   );
 
-  return embeddings.embedDocuments(texts);
+  return withRetry(() => embeddings.embedDocuments(texts), {
+    label: "EmbedDocuments",
+  });
 }
 
 /**

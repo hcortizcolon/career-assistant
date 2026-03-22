@@ -110,7 +110,7 @@
 
 #### Story 1.4 — Add exponential backoff for API calls
 
-`[ ]` | Size: **M** | PRD: NFR-301
+`[x]` | Size: **M** | PRD: NFR-301
 
 **What:** Create a `withRetry()` utility that wraps async functions with exponential backoff. Integrate it with OpenAI and Pinecone calls.
 
@@ -119,18 +119,18 @@
 **What you'll learn:** Exponential backoff algorithm, detecting retryable vs non-retryable errors, `setTimeout` as a promise, HTTP status code semantics (429, 500, 503 = retry; 401, 400 = don't retry).
 
 **Tasks:**
-- [ ] Create `src/utils/retry.ts` with `withRetry<T>(fn, options)` utility
-- [ ] Options: `maxRetries` (default 3), `baseDelayMs` (default 1000), `retryableErrors` (predicate function)
-- [ ] Delay formula: `baseDelayMs * 2^attempt` (1s, 2s, 4s)
-- [ ] Log each retry attempt at `warn` level
-- [ ] Wrap `embedText`/`embedDocuments` in `withRetry`
-- [ ] Wrap `upsertDocuments`, `querySimilar`, `querySimilarWithScores` in `withRetry`
+- [x] Create `src/utils/retry.ts` with `withRetry<T>(fn, options)` utility
+- [x] Options: `maxRetries` (default 3), `baseDelayMs` (default 1000), `retryableErrors` (predicate function)
+- [x] Delay formula: `baseDelayMs * 2^attempt` (1s, 2s, 4s)
+- [x] Log each retry attempt at `warn` level
+- [x] Wrap `embedText`/`embedDocuments` in `withRetry`
+- [x] Wrap `upsertDocuments`, `querySimilar`, `querySimilarWithScores` in `withRetry`
 
 **Acceptance criteria:**
-- [ ] A function that succeeds on first try: no delay, returns result
-- [ ] A function that fails twice with 429, then succeeds: retries with backoff, returns result
-- [ ] A function that fails with 401: does NOT retry (non-retryable), throws immediately
-- [ ] A function that fails 4 times (> maxRetries): throws after exhausting retries
+- [x] A function that succeeds on first try: no delay, returns result
+- [x] A function that fails twice with 429, then succeeds: retries with backoff, returns result
+- [x] A function that fails with 401: does NOT retry (non-retryable), throws immediately
+- [x] A function that fails 4 times (> maxRetries): throws after exhausting retries
 
 ---
 
