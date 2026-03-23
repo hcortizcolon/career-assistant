@@ -28,11 +28,12 @@ function loadEnv(): Env {
       .join("\n");
 
     const missingVars = result.error.issues
+      .filter((i) => i.code === "invalid_type" && i.received === "undefined")
       .map((i) => i.path.join("."))
       .filter(Boolean);
 
     throw new ConfigError(
-      `Invalid environment configuration:\n${formatted}\n\nSee .env.example for required variables.`,
+      `Invalid environment configuration:\n${formatted}`,
       missingVars,
     );
   }
