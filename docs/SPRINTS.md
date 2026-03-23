@@ -136,7 +136,7 @@
 
 #### Story 1.5 — Improve CLI error output
 
-`[ ]` | Size: **S** | PRD: NFR-305
+`[x]` | Size: **S** | PRD: NFR-305
 
 **What:** Update the CLI's top-level `catch` block in `src/index.ts` to format errors based on their type. `DocumentError` shows the file path. `LLMParseError` suggests retrying. `ConfigError` points to `.env.example`.
 
@@ -145,17 +145,17 @@
 **What you'll learn:** Pattern matching on error types using `instanceof`, exit codes (0 = success, 1 = user error, 2 = system error), user-friendly error formatting.
 
 **Tasks:**
-- [ ] Update the `catch` block in `main()` to check `instanceof` for each error class
-- [ ] `ConfigError` → print missing vars, point to `.env.example`, exit code 1
-- [ ] `DocumentError` → print file path and suggestion, exit code 1
-- [ ] `LLMParseError` → print "AI returned unexpected output, try again", exit code 2
-- [ ] `VectorStoreError` → print "Could not reach vector database", exit code 2
-- [ ] Unknown errors → print message only (no stack trace unless `LOG_LEVEL=debug`), exit code 2
+- [x] Update the `catch` block in `main()` to check `instanceof` for each error class
+- [x] `ConfigError` → print missing vars, point to `.env.example`, exit code 1
+- [x] `DocumentError` → print file path and suggestion, exit code 1
+- [x] `LLMParseError` → print "AI returned unexpected output, try again", exit code 2
+- [x] `VectorStoreError` → print "Could not reach vector database", exit code 2
+- [x] Unknown errors → print message only (no stack trace unless `LOG_LEVEL=debug`), exit code 2
 
 **Acceptance criteria:**
-- [ ] Missing `.env` config → user sees formatted list of what's missing + "See .env.example"
-- [ ] Non-existent file → user sees file path + suggestion to check the path
-- [ ] No raw stack traces unless `LOG_LEVEL=debug`
+- [x] Missing `.env` config → user sees formatted list of what's missing + "See .env.example"
+- [x] Non-existent file → user sees file path + suggestion to check the path
+- [x] No raw stack traces unless `LOG_LEVEL=debug`
 
 ---
 

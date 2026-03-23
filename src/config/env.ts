@@ -1,5 +1,6 @@
 import { config } from "dotenv";
 import { z } from "zod";
+import { ConfigError } from "../errors/index.js";
 
 config();
 
@@ -26,8 +27,13 @@ function loadEnv(): Env {
       .map((i) => `  - ${i.path.join(".")}: ${i.message}`)
       .join("\n");
 
-    throw new Error(
+    const missingVars = result.error.issues
+      .map((i) => i.path.join("."))
+      .filter(Boolean);
+
+    throw new ConfigError(
       `Invalid environment configuration:\n${formatted}\n\nSee .env.example for required variables.`,
+      missingVars,
     );
   }
 

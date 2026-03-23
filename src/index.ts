@@ -7,6 +7,13 @@ import { scoreJobFit, type JobFitResult } from "./chains/job-fit-chain.js";
 import { analyzeSkillGaps, type SkillGapResult } from "./chains/skill-gap-chain.js";
 import { suggestRewrites, type RewriteResult } from "./chains/rewrite-chain.js";
 import { askQuestion } from "./chains/retrieval-chain.js";
+import {
+  ConfigError,
+  DocumentError,
+  LLMParseError,
+  VectorStoreError,
+  EmbeddingError,
+} from "./errors/index.js";
 import { logger } from "./utils/logger.js";
 
 // ---------------------------------------------------------------------------
@@ -147,6 +154,60 @@ Environment:
 }
 
 // ---------------------------------------------------------------------------
+// Error formatting
+// ---------------------------------------------------------------------------
+
+function handleError(error: unknown): never {
+  if (error instanceof ConfigError) {
+    console.error(`\nConfiguration error:\n${error.message}`);
+    if (error.missingVars.length > 0) {
+      console.error(`\nMissing variables: ${error.missingVars.join(", ")}`);
+    }
+    console.error("\nSee .env.example for required configuration.");
+    process.exit(1);
+  }
+
+  if (error instanceof DocumentError) {
+    console.error(`\nDocument error: ${error.message}`);
+    if (error.code === "DOCUMENT_NOT_FOUND") {
+      console.error("Check that the file path is correct.");
+    } else if (error.code === "DOCUMENT_UNSUPPORTED_TYPE") {
+      console.error("Supported formats: .pdf, .txt, .md");
+    } else if (error.code === "DOCUMENT_EMPTY") {
+      console.error("The file exists but contains no text.");
+    }
+    process.exit(1);
+  }
+
+  if (error instanceof LLMParseError) {
+    console.error(`\nAI returned an unexpected response format.`);
+    console.error("This sometimes happens — please try again.");
+    logger.debug(`Raw output: ${error.received}`, "CLI");
+    process.exit(2);
+  }
+
+  if (error instanceof VectorStoreError) {
+    console.error(`\nVector database error: ${error.message}`);
+    console.error("Check that your Pinecone index is configured and accessible.");
+    process.exit(2);
+  }
+
+  if (error instanceof EmbeddingError) {
+    console.error(`\nEmbedding service error: ${error.message}`);
+    console.error("Check your OpenAI API key and that the embedding model is available.");
+    process.exit(2);
+  }
+
+  // Unknown errors — show message, hide stack trace unless debug
+  const message = error instanceof Error ? error.message : String(error);
+  console.error(`\nError: ${message}`);
+  if (error instanceof Error && error.stack) {
+    logger.debug(error.stack, "CLI");
+  }
+  process.exit(2);
+}
+
+// ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
 
@@ -210,11 +271,7 @@ async function main(): Promise<void> {
         break;
     }
   } catch (error) {
-    logger.error(
-      error instanceof Error ? error.message : String(error),
-      "CLI",
-    );
-    process.exit(1);
+    handleError(error);
   }
 }
 
